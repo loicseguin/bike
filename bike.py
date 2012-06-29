@@ -16,10 +16,12 @@ considered a comment.
 
 Here is an example file::
 
-    23/Jun/2012-15:32:12 12 0.60 Around the house
-    23/Jun/2012-15:32:12 75 4.00 Commute to work
+    23/06/2012-15:32:12 12 0.60 Around the house
+    23/06/2012-15:32:12 75 4.00 Commute to work
 
 The timestamp is the date and time at which the ride was added to the database.
+It is added automatically by the script but can be modified as needed using any
+text editor.
 
 """
 
