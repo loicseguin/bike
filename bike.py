@@ -62,7 +62,9 @@ FR_DICT = {
     "Date": "Date",
     "Distance": "Distance",
     "Duration": "Durée",
-    "Comment": "Commentaire"
+    "Comment": "Commentaire",
+    "Speed": "Vitesse",
+    "dd/mm/yyyy hh:mm": "jj/mm/aaaa hh:mm"
     }
 TRANS_DICT = {}
 
@@ -161,13 +163,33 @@ def print_stats(args):
 def print_rides(args):
     """Print all rides in database."""
     rides = read_db_file()
-    print('{0:16s}  {1:13s}  {2:13s}  {3:30s}'.format(
-          _('Date'), _('Distance') + ' (km)', _('Duration') + ' (h)', _('Comment')))
-    print('{0:=<16s}  {1:=<13s}  {2:=<13s}  {3:=<30s}'.format('', '', '', ''))
+    comment_width = 30
+    header_format = '{0:16s}  {1:%ds}  {2:%ds}  {3:%ds}  {4:%ds}' % (
+            len(_('Distance')), len(_('Duration')), len(_('Speed')),
+            comment_width)
+    ride_format = '{0:16s}  {1:%d.1f}  {2:%d.1f}  {3:%d.1f}  {4:%ds}' % (
+            len(_('Distance')), len(_('Duration')), len(_('Speed')),
+            comment_width)
+    sep_format = '{0:=<16s}  {1:=<%ds}  {2:=<%ds}  {3:=<%ds}  {4:=<%ds}' % (
+            len(_('Distance')), len(_('Duration')), len(_('Speed')),
+            comment_width)
+    print(header_format.format(
+        _('Date'), _('Distance'), _('Duration'), _('Speed'), _('Comment')))
+    print(header_format.format(
+        _('dd/mm/yyyy hh:mm'), '(km)', '(h)', '(km/h)', ''))
+    print(sep_format.format('', '', '', '', ''))
     for ride in rides:
-        print('{0:16s}  {1:13.1f}  {2:13.1f}  {3:30s}'.format(
-            time.strftime('%d/%m/%Y %H:%M', ride['timestamp']),
-            ride['distance'], ride['duration'], ride['comment']))
+        if len(ride['comment']) <= comment_width:
+            print(ride_format.format(
+                time.strftime('%d/%m/%Y %H:%M', ride['timestamp']),
+                ride['distance'], ride['duration'],
+                ride['distance'] / ride['duration'], ride['comment']))
+        else:
+            print(ride_format.format(
+                time.strftime('%d/%m/%Y %H:%M', ride['timestamp']),
+                ride['distance'], ride['duration'],
+                ride['distance'] / ride['duration'], 
+                ride['comment'][:comment_width - 3] + '...'))
 
 
 def run(argv=sys.argv[1:]):
