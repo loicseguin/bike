@@ -42,7 +42,8 @@ import time
 import webbrowser
 
 
-RIDEDB = os.path.expanduser('~/.bikerides')
+#RIDEDB = os.path.expanduser('~/.bikerides')
+RIDEDB = 'rides'
 TIMESTR = "%d/%m/%Y-%H:%M:%S"
 MINUTES_PER_HOUR = 60.
 
@@ -58,6 +59,7 @@ FR_DICT = {
     "Enter distance: ": "Entrer la distance : ",
     "Enter duration: ": "Entrer la durée : ",
     "Comment (optional): ": "Commentaire (optionnel) : ",
+    "Ride URL (optional): ": "URL de l'itinéraire (optionnel) : ",
     "stats": "stats",
     "add": "add",
     "Date": "Date",
@@ -125,25 +127,30 @@ def add_ride(args):
     distance = float(input(_("Enter distance: ")))
     duration = parse_duration(input(_("Enter duration: ")))
     comment = input(_("Comment (optional): "))
+    url = input(_("Ride URL (optional): "))
 
     rides_file = open(RIDEDB, 'a')
-    rides_file.write(' '.join([time.strftime(TIMESTR, timestamp),
-                               str(distance), str(duration), comment])
+    rides_file.write('|||'.join([time.strftime(TIMESTR, timestamp),
+                               str(distance), str(duration), comment, url])
                      + '\n')
     rides_file.close()
 
 
-def read_db_file():
+def read_db_file(sep='|||', nb_tokens=4):
     """Read ride data file and store information in a list of dictionaries.
 
     """
     rides = []
     for line in open(RIDEDB):
-        tokens = line.split()
+        tokens = line.split(sep)
         ride = {'timestamp': time.strptime(tokens[0], TIMESTR),
                 'distance': float(tokens[1]),
-                'duration': float(tokens[2]),
-                'comment': ' '.join(tokens[3:])}
+                'duration': float(tokens[2])}
+        if nb_tokens == 3:
+            ride['comment'] = ' '.join(tokens[3:])
+        elif nb_tokens == 4:
+            ride['comment'] = tokens[3]
+            ride['url'] = tokens[4]
         rides.append(ride)
     return rides
 
@@ -196,6 +203,19 @@ def print_rides(args):
                 id=id))
 
 
+def migrate(args):
+    """Migrate the database file to new version."""
+    rides = read_db_file(sep=' ', nb_tokens='3')
+    rides_file = open(RIDEDB, 'w')
+    for ride in rides:
+        ride['url'] = ''
+        rides_file.write('|||'.join([time.strftime(TIMESTR, ride['timestamp']),
+                                   str(ride['distance']), str(ride['duration']),
+                                   ride['comment'], ride['url']])
+                         + '\n')
+    rides_file.close()
+
+
 def run(argv=sys.argv[1:]):
     """Parse the command line arguments and run the appropriate command."""
     clparser = argparse.ArgumentParser(
@@ -213,6 +233,10 @@ def run(argv=sys.argv[1:]):
 
     printparser = subparsers.add_parser(_('rides'), help=_('print all rides'))
     printparser.set_defaults(func=print_rides)
+
+    migrateparser = subparsers.add_parser(_('migrate'),
+                                          help=_('migrate rides file'))
+    migrateparser.set_defaults(func=migrate)
 
     args = clparser.parse_args(argv)
     args.func(args)
