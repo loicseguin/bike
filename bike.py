@@ -136,7 +136,7 @@ def add_ride(args):
     rides_file.close()
 
 
-def read_db_file(sep='|||', nb_tokens=4):
+def read_db_file(sep='|||'):
     """Read ride data file and store information in a list of dictionaries.
 
     """
@@ -146,11 +146,12 @@ def read_db_file(sep='|||', nb_tokens=4):
         ride = {'timestamp': time.strptime(tokens[0], TIMESTR),
                 'distance': float(tokens[1]),
                 'duration': float(tokens[2])}
-        if nb_tokens == 3:
-            ride['comment'] = ' '.join(tokens[3:])
-        elif nb_tokens == 4:
-            ride['comment'] = tokens[3]
-            ride['url'] = tokens[4]
+        if sep == ' ':
+            ride['comment'] = ' '.join(tokens[3:]).strip()
+            ride['url'] = ''
+        else:
+            ride['comment'] = tokens[3].strip()
+            ride['url'] = tokens[4].strip()
         rides.append(ride)
     return rides
 
@@ -172,27 +173,28 @@ def print_rides(args):
     """Print all rides in database."""
     rides = read_db_file()
     comment_width = 30
-    header_format = '{id:4s}  {0:16s}  {1:%ds}  {2:%ds}  {3:%ds}  {4:%ds}' % (
+    header_format = '{id:4s}  {0:16s}  {1:%ds}  {2:%ds}  {3:%ds}  {4:%ds}  {5:3s}' % (
             len(_('Distance')), len(_('Duration')), len(_('Speed')),
             comment_width)
-    ride_format = '{id:4d}  {0:16s}  {1:%d.1f}  {2:%d.1f}  {3:%d.1f}  {4:%ds}' % (
+    ride_format = '{id:4d}  {0:16s}  {1:%d.1f}  {2:%d.1f}  {3:%d.1f}  {4:%ds}  {5:3d}' % (
             len(_('Distance')), len(_('Duration')), len(_('Speed')),
             comment_width)
-    sep_format = '{id:=<4s}  {0:=<16s}  {1:=<%ds}  {2:=<%ds}  {3:=<%ds}  {4:=<%ds}' % (
+    sep_format = '{id:=<4s}  {0:=<16s}  {1:=<%ds}  {2:=<%ds}  {3:=<%ds}  {4:=<%ds}  {5:=<3s}' % (
             len(_('Distance')), len(_('Duration')), len(_('Speed')),
             comment_width)
     print(header_format.format(
         _('Date'), _('Distance'), _('Duration'), _('Speed'), _('Comment'),
-        id='id'))
+        _('URL'), id='id'))
     print(header_format.format(
-        _('dd/mm/yyyy hh:mm'), '(km)', '(h)', '(km/h)', '', id=''))
-    print(sep_format.format('', '', '', '', '', id=''))
+        _('dd/mm/yyyy hh:mm'), '(km)', '(h)', '(km/h)', '', '', id=''))
+    print(sep_format.format('', '', '', '', '', '', id=''))
     for id, ride in enumerate(rides):
         if len(ride['comment']) <= comment_width:
             print(ride_format.format(
                 time.strftime('%d/%m/%Y %H:%M', ride['timestamp']),
                 ride['distance'], ride['duration'],
                 ride['distance'] / ride['duration'], ride['comment'],
+                ride['url'] != '',
                 id=id))
         else:
             print(ride_format.format(
@@ -200,20 +202,27 @@ def print_rides(args):
                 ride['distance'], ride['duration'],
                 ride['distance'] / ride['duration'], 
                 ride['comment'][:comment_width - 3] + '...',
+                ride['url'] != '',
                 id=id))
 
 
 def migrate(args):
     """Migrate the database file to new version."""
-    rides = read_db_file(sep=' ', nb_tokens='3')
+    rides = read_db_file(sep=' ')
     rides_file = open(RIDEDB, 'w')
     for ride in rides:
-        ride['url'] = ''
         rides_file.write('|||'.join([time.strftime(TIMESTR, ride['timestamp']),
                                    str(ride['distance']), str(ride['duration']),
                                    ride['comment'], ride['url']])
                          + '\n')
     rides_file.close()
+
+
+def view(args):
+    """View ride URL in default browser."""
+    rides = read_db_file()
+    print('Opened %s' % rides[args.ride_id]['url'])
+    webbrowser.open(rides[args.ride_id]['url'])
 
 
 def run(argv=sys.argv[1:]):
@@ -237,6 +246,12 @@ def run(argv=sys.argv[1:]):
     migrateparser = subparsers.add_parser(_('migrate'),
                                           help=_('migrate rides file'))
     migrateparser.set_defaults(func=migrate)
+
+    viewparser = subparsers.add_parser(_('view'),
+                                          help=_('view ride in web browser'))
+    viewparser.add_argument('ride_id', help='numerical id of the ride to view',
+                            type=int)
+    viewparser.set_defaults(func=view)
 
     args = clparser.parse_args(argv)
     args.func(args)
