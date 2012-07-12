@@ -42,8 +42,8 @@ import time
 import webbrowser
 
 
-#RIDEDB = os.path.expanduser('~/.bikerides')
-RIDEDB = 'rides'
+RIDEDB = os.path.expanduser('~/.bikerides')
+#RIDEDB = 'rides'
 TIMESTR = "%d/%m/%Y-%H:%M:%S"
 MINUTES_PER_HOUR = 60.
 
