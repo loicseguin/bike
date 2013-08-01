@@ -67,7 +67,8 @@ FR_DICT = {
     "Duration": "Durée",
     "Comment": "Commentaire",
     "Speed": "Vitesse",
-    "dd/mm/yyyy hh:mm": "jj/mm/aaaa hh:mm"
+    "dd/mm/yyyy hh:mm": "jj/mm/aaaa hh:mm",
+    "Error: no URL for ride {}": "Erreur: pas d'URL pour la randonnée {}"
     }
 TRANS_DICT = {}
 
@@ -221,8 +222,11 @@ def migrate(args):
 def view(args):
     """View ride URL in default browser."""
     rides = read_db_file()
-    print('Opened %s' % rides[args.ride_id]['url'])
-    webbrowser.open(rides[args.ride_id]['url'])
+    if rides[args.ride_id]['url']:
+        print('Opened %s' % rides[args.ride_id]['url'])
+        webbrowser.open(rides[args.ride_id]['url'])
+    else:
+        print(_('Error: no URL for ride {}').format(args.ride_id), file=sys.stderr)
 
 
 def run(argv=sys.argv[1:]):
