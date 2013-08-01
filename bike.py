@@ -53,7 +53,7 @@ MINUTES_PER_HOUR = 60.
 FR_DICT = {
     "Distance:      %8.2f km":   "Distance :        %8.2f km",
     "Duration:      %8.2f h":    "Durée :           %8.2f h",
-    "Average speed: %8.2f km/h": "Vitesse moyenne : %8.2f km/h",
+    "Average speed: %s km/h": "Vitesse moyenne : %s km/h",
     "Gather statistics about bike rides.":
         "Collecte des données sur des randonnées à bicyclette.",
     "add a new ride": "ajouter une nouvelle randonnée",
@@ -74,7 +74,8 @@ FR_DICT = {
     "Opened %s": "Ouverture de %s",
     "User interrupted program, no changes were recorded in the "
     "database.": "L'usager a interrompu le programme, aucun changement "
-                 "enregistré dans la base de données."
+                 "enregistré dans la base de données.",
+    "No rides for year(s): ": "Aucune randonnée pour "
     }
 TRANS_DICT = {}
 
@@ -181,14 +182,21 @@ def read_db_file(sep=',', year=False):
 def print_stats(args):
     """Print statistics about the rides."""
     rides = read_db_file(year=args.year)
+    if len(rides) == 0:
+        print(_("No rides for year(s): ") + ', '.join(map(str, args.year)))
+        return
     tot_distance = 0.0
     tot_duration = 0.0
     for ride in rides:
         tot_distance += ride['distance']
         tot_duration += ride['duration']
+    if tot_duration != 0:
+        speed = '{:8.2f}'.format(tot_distance / tot_duration)
+    else:
+        speed = 'nan'
     print(_("Distance:      %8.2f km") % tot_distance)
     print(_("Duration:      %8.2f h") % tot_duration)
-    print(_("Average speed: %8.2f km/h") % (tot_distance / tot_duration))
+    print(_("Average speed: %s km/h") % speed)
 
 
 def print_rides(args):
@@ -198,11 +206,14 @@ def print_rides(args):
     
     """
     rides = read_db_file(year=args.year)
+    if len(rides) == 0:
+        print(_("No rides for year(s): ") + ', '.join(map(str, args.year)))
+        return
     comment_width = 30
     header_format = '{id:4s}  {0:16s}  {1:%ds}  {2:%ds}  {3:%ds}  {4:%ds}  {5:3s}' % (
             len(_('Distance')), len(_('Duration')), len(_('Speed')),
             comment_width)
-    ride_format = '{id:4d}  {0:16s}  {1:%d.1f}  {2:%d.1f}  {3:%d.1f}  {4:%ds}  {5:3d}' % (
+    ride_format = '{id:4d}  {0:16s}  {1:%d.1f}  {2:%d.1f}  {3:>%ds}  {4:%ds}  {5:3d}' % (
             len(_('Distance')), len(_('Duration')), len(_('Speed')),
             comment_width)
     sep_format = '{id:=<4s}  {0:=<16s}  {1:=<%ds}  {2:=<%ds}  {3:=<%ds}  {4:=<%ds}  {5:=<3s}' % (
@@ -217,9 +228,12 @@ def print_rides(args):
     print(sep_format.format('', '', '', '', '', '', id=''))
 
     for id, ride in enumerate(rides):
+        if ride['duration'] != 0:
+            speed = '{:.1f}'.format(ride['distance'] / ride['duration'])
+        else:
+            speed = 'nan'
         elements = [time.strftime(time_str_format, ride['timestamp']),
-                    ride['distance'], ride['duration'],
-                    ride['distance'] / ride['duration']]
+                    ride['distance'], ride['duration'], speed]
         if len(ride['comment']) <= comment_width:
             elements.append(ride['comment'])
         else:
