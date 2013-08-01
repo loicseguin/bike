@@ -50,9 +50,9 @@ MINUTES_PER_HOUR = 60.
 
 
 FR_DICT = {
-    "Distance: %6.2f km":        "Distance :        %6.2f km",
-    "Duration: %6.2f h":         "Durée :           %6.2f h",
-    "Average speed: %6.2f km/h": "Vitesse moyenne : %6.2f km/h",
+    "Distance:      %8.2f km":   "Distance :        %8.2f km",
+    "Duration:      %8.2f h":    "Durée :           %8.2f h",
+    "Average speed: %8.2f km/h": "Vitesse moyenne : %8.2f km/h",
     "Gather statistics about bike rides.":
         "Collecte des données sur des randonnées à bicyclette.",
     "add a new ride": "ajouter une nouvelle randonnée",
@@ -141,11 +141,12 @@ def add_ride(args):
     comment = input(_("Comment (optional): "))
     url = input(_("Ride URL (optional): "))
 
-    rides_file = open(RIDEDB, 'a')
-    rides_file.write('|||'.join([time.strftime(TIMESTR, timestamp),
-                               str(distance), str(duration), comment, url])
-                     + '\n')
-    rides_file.close()
+    with open(RIDEDB, 'a') as rides_file:
+        rides_writer = csv.writer(rides_file, delimiter=',', quotechar='"',
+                quoting=csv.QUOTE_MINIMAL)
+        rides_writer.writerow(
+                [time.strftime(TIMESTR, timestamp),
+                 str(distance), str(duration), comment, url])
 
 
 def read_db_file(sep=','):
@@ -173,9 +174,9 @@ def print_stats(args):
     for ride in rides:
         tot_distance += ride['distance']
         tot_duration += ride['duration']
-    print(_("Distance:      %6.2f km") % tot_distance)
-    print(_("Duration:      %6.2f h") % tot_duration)
-    print(_("Average speed: %6.2f km/h") % (tot_distance / tot_duration))
+    print(_("Distance:      %8.2f km") % tot_distance)
+    print(_("Duration:      %8.2f h") % tot_duration)
+    print(_("Average speed: %8.2f km/h") % (tot_distance / tot_duration))
 
 
 def print_rides(args):
@@ -196,18 +197,19 @@ def print_rides(args):
         _('URL'), id='id'))
     print(header_format.format(
         _('dd-mm-yyyy hh:mm'), '(km)', '(h)', '(km/h)', '', '', id=''))
+    time_str_format = '%d-%m-%Y %H:%M'
     print(sep_format.format('', '', '', '', '', '', id=''))
     for id, ride in enumerate(rides):
         if len(ride['comment']) <= comment_width:
             print(ride_format.format(
-                time.strftime('%d-%m-%Y %H:%M', ride['timestamp']),
+                time.strftime(time_str_format, ride['timestamp']),
                 ride['distance'], ride['duration'],
                 ride['distance'] / ride['duration'], ride['comment'],
                 ride['url'] != '',
                 id=id))
         else:
             print(ride_format.format(
-                time.strftime('%d/%m/%Y %H:%M', ride['timestamp']),
+                time.strftime(time_str_format, ride['timestamp']),
                 ride['distance'], ride['duration'],
                 ride['distance'] / ride['duration'], 
                 ride['comment'][:comment_width - 3] + '...',
