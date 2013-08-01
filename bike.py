@@ -254,6 +254,9 @@ def run(argv=sys.argv[1:]):
     viewparser.set_defaults(func=view)
 
     args = clparser.parse_args(argv)
+    if not 'func' in args:
+        clparser.error("You must specify one of 'add', 'rides', 'stats', or 'view'")
+
     args.func(args)
 
 
