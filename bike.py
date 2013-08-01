@@ -55,7 +55,7 @@ FR_DICT = {
     "Duration:      %8.2f h":    "Durée :           %8.2f h",
     "Average speed: %s km/h": "Vitesse moyenne : %s km/h",
     "Gather statistics about bike rides.":
-        "Collecte des données sur des randonnées à bicyclette.",
+    "Collecte des données sur des randonnées à bicyclette.",
     "add a new ride": "ajouter une nouvelle randonnée",
     "print statistics about all rides": "imprimer les statistiques",
     "Enter distance: ": "Entrer la distance : ",
@@ -145,10 +145,10 @@ def add_ride(args):
 
     with open(RIDEDB, 'a') as rides_file:
         rides_writer = csv.writer(rides_file, delimiter=',', quotechar='"',
-                quoting=csv.QUOTE_MINIMAL)
+                                  quoting=csv.QUOTE_MINIMAL)
         rides_writer.writerow(
-                [time.strftime(TIMESTR, timestamp),
-                 str(distance), str(duration), comment, url])
+            [time.strftime(TIMESTR, timestamp),
+             str(distance), str(duration), comment, url])
 
 
 def read_db_file(sep=',', year=False):
@@ -203,7 +203,7 @@ def print_rides(args):
     """Print rides in database.  By default, only print rides for the current
     year. If ``year`` is set to a single year of a list of years, print rides
     for the specified years.
-    
+
     """
     rides = read_db_file(year=args.year)
     if len(rides) == 0:
@@ -248,12 +248,12 @@ def migrate(args):
     new_time_str = "%d-%m-%Y %H:%M:%S"
     with open(RIDEDB, 'w') as rides_file:
         rides_writer = csv.writer(rides_file, delimiter=',', quotechar='"',
-                quoting=csv.QUOTE_MINIMAL)
+                                  quoting=csv.QUOTE_MINIMAL)
         for ride in rides:
             rides_writer.writerow(
-                    [time.strftime(new_time_str, ride['timestamp']),
-                     str(ride['distance']), str(ride['duration']),
-                     ride['comment'], ride['url']])
+                [time.strftime(new_time_str, ride['timestamp']),
+                 str(ride['distance']), str(ride['duration']),
+                 ride['comment'], ride['url']])
 
 
 def view(args):
@@ -263,7 +263,8 @@ def view(args):
         print(_('Opened %s') % rides[args.ride_id]['url'])
         webbrowser.open(rides[args.ride_id]['url'])
     else:
-        print(_('Error: no URL for ride {}').format(args.ride_id), file=sys.stderr)
+        print(_('Error: no URL for ride {}').format(args.ride_id),
+              file=sys.stderr)
 
 
 def run(argv=sys.argv[1:]):
@@ -271,7 +272,7 @@ def run(argv=sys.argv[1:]):
     clparser = argparse.ArgumentParser(
             description=_('Gather statistics about bike rides.'))
     clparser.add_argument('-v', '--version', action='version',
-            version='%(prog)s ' + __version__)
+                          version='%(prog)s ' + __version__)
 
     year_parser = argparse.ArgumentParser(add_help=False)
     year_parser.add_argument('year', help=_('year or list of years'),
@@ -296,14 +297,15 @@ def run(argv=sys.argv[1:]):
     migrateparser.set_defaults(func=migrate)
 
     viewparser = subparsers.add_parser(_('view'),
-                                          help=_('view ride in web browser'))
+                                       help=_('view ride in web browser'))
     viewparser.add_argument('ride_id', help='numerical id of the ride to view',
                             type=int)
     viewparser.set_defaults(func=view)
 
     args = clparser.parse_args(argv)
     if not 'func' in args:
-        clparser.error("You must specify one of 'add', 'rides', 'stats', or 'view'")
+        clparser.error("You must specify one of 'add', 'rides', 'stats', or "
+                       "'view'")
 
     try:
         args.func(args)
