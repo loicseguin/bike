@@ -16,9 +16,9 @@ column if a URL for the itinerary.
 
 Here is an example file::
 
-    23-06-2012 15:32:12,12,0.60,Around the house,
-    23-08-2012 13:21:48,75,4.00,"Commute to work, with visit at grocery",http://www.mymap.com/1234
-    23-11-2012 20:10:35,24,1.25,,http://www.yourmap.com/4321
+    2012-06-23 15:32:12,12,0.60,Around the house,
+    2012-07-04 13:21:48,75,4.00,"Commute to work, with visit at grocery",http://www.mymap.com/1234
+    2012-07-12 20:10:35,24,1.25,,http://www.yourmap.com/4321
 
 The timestamp is the date and time at which the ride was added to the database.
 It is added automatically by the script but can be modified as needed using any
@@ -46,7 +46,7 @@ import webbrowser
 
 RIDEDB = os.path.expanduser('~/.bikerides')
 #RIDEDB = 'rides'
-TIMESTR = "%d-%m-%Y %H:%M:%S"
+TIMESTR = "%Y-%m-%d %H:%M:%S"
 MINUTES_PER_HOUR = 60.
 
 
@@ -69,7 +69,7 @@ FR_DICT = {
     "Duration": "Durée",
     "Comment": "Commentaire",
     "Speed": "Vitesse",
-    "dd-mm-yyyy hh:mm": "jj-mm-aaaa hh:mm",
+    "yyyy-mm-dd hh:mm": "aaaa-mm-jj hh:mm",
     "Error: no URL for ride {}": "Erreur: pas d'URL pour la randonnée {}",
     "Opened %s": "Ouverture de %s",
     "User interrupted program, no changes were recorded in the "
@@ -223,8 +223,8 @@ def print_rides(args):
         _('Date'), _('Distance'), _('Duration'), _('Speed'), _('Comment'),
         _('URL'), id='id'))
     print(header_format.format(
-        _('dd-mm-yyyy hh:mm'), '(km)', '(h)', '(km/h)', '', '', id=''))
-    time_str_format = '%d-%m-%Y %H:%M'
+        _('yyyy-mm-dd hh:mm'), '(km)', '(h)', '(km/h)', '', '', id=''))
+    time_str_format = '%Y-%m-%d %H:%M'
     print(sep_format.format('', '', '', '', '', '', id=''))
 
     for id, ride in enumerate(rides):
@@ -244,8 +244,8 @@ def print_rides(args):
 
 def migrate(args):
     """Migrate the database file to new version."""
-    rides = read_db_file(sep='|||')
-    new_time_str = "%d-%m-%Y %H:%M:%S"
+    rides = read_db_file()
+    new_time_str = "%Y-%m-%d %H:%M:%S"
     with open(RIDEDB, 'w') as rides_file:
         rides_writer = csv.writer(rides_file, delimiter=',', quotechar='"',
                                   quoting=csv.QUOTE_MINIMAL)
