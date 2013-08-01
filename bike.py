@@ -150,26 +150,37 @@ def add_ride(args):
                  str(distance), str(duration), comment, url])
 
 
-def read_db_file(sep=','):
-    """Read ride data file and store information in a list of dictionaries.
+def read_db_file(sep=',', year=False):
+    """Read ride data file and store information in a list of dictionaries.  By
+    default, return only rides for the current year.  If ``year`` is set to a
+    single year of a list of years, return rides for the specified years.
 
     """
     rides = []
+    if not year:
+        years = [time.localtime().tm_year]
+    elif not hasattr(year, '__contains__'):
+        years = [year]
+    else:
+        years = year
+
     with open(RIDEDB) as rides_file:
         rides_reader = csv.reader(rides_file, delimiter=sep, quotechar='"')
-        for ride_row in rides_reader:
+        for id, ride_row in enumerate(rides_reader):
             ride = {'timestamp': time.strptime(ride_row[0], TIMESTR),
                     'distance': float(ride_row[1]),
                     'duration': float(ride_row[2]),
                     'comment': ride_row[3],
-                    'url': ride_row[4]}
-            rides.append(ride)
+                    'url': ride_row[4],
+                    'id': id}
+            if ride['timestamp'].tm_year in years:
+                rides.append(ride)
     return rides
 
 
 def print_stats(args):
     """Print statistics about the rides."""
-    rides = read_db_file()
+    rides = read_db_file(year=args.year)
     tot_distance = 0.0
     tot_duration = 0.0
     for ride in rides:
@@ -181,8 +192,12 @@ def print_stats(args):
 
 
 def print_rides(args):
-    """Print all rides in database."""
-    rides = read_db_file()
+    """Print rides in database.  By default, only print rides for the current
+    year. If ``year`` is set to a single year of a list of years, print rides
+    for the specified years.
+    
+    """
+    rides = read_db_file(year=args.year)
     comment_width = 30
     header_format = '{id:4s}  {0:16s}  {1:%ds}  {2:%ds}  {3:%ds}  {4:%ds}  {5:3s}' % (
             len(_('Distance')), len(_('Duration')), len(_('Speed')),
@@ -200,22 +215,17 @@ def print_rides(args):
         _('dd-mm-yyyy hh:mm'), '(km)', '(h)', '(km/h)', '', '', id=''))
     time_str_format = '%d-%m-%Y %H:%M'
     print(sep_format.format('', '', '', '', '', '', id=''))
+
     for id, ride in enumerate(rides):
+        elements = [time.strftime(time_str_format, ride['timestamp']),
+                    ride['distance'], ride['duration'],
+                    ride['distance'] / ride['duration']]
         if len(ride['comment']) <= comment_width:
-            print(ride_format.format(
-                time.strftime(time_str_format, ride['timestamp']),
-                ride['distance'], ride['duration'],
-                ride['distance'] / ride['duration'], ride['comment'],
-                ride['url'] != '',
-                id=id))
+            elements.append(ride['comment'])
         else:
-            print(ride_format.format(
-                time.strftime(time_str_format, ride['timestamp']),
-                ride['distance'], ride['duration'],
-                ride['distance'] / ride['duration'], 
-                ride['comment'][:comment_width - 3] + '...',
-                ride['url'] != '',
-                id=id))
+            elements.append(ride['comment'][:comment_width - 3] + '...')
+        elements.append(ride['url'] != '')
+        print(ride_format.format(*elements, id=ride['id']))
 
 
 def migrate(args):
@@ -249,15 +259,22 @@ def run(argv=sys.argv[1:]):
     clparser.add_argument('-v', '--version', action='version',
             version='%(prog)s ' + __version__)
 
+    year_parser = argparse.ArgumentParser(add_help=False)
+    year_parser.add_argument('year', help=_('year or list of years'),
+                             nargs='*', default=time.localtime().tm_year,
+                             type=int)
+
     subparsers = clparser.add_subparsers()
     statsparser = subparsers.add_parser(_('stats'),
-            help=_('print statistics about all rides'))
+            help=_('print statistics about all rides'),
+            parents=[year_parser])
     statsparser.set_defaults(func=print_stats)
 
     addparser = subparsers.add_parser(_('add'), help=_('add a new ride'))
     addparser.set_defaults(func=add_ride)
 
-    printparser = subparsers.add_parser(_('rides'), help=_('print all rides'))
+    printparser = subparsers.add_parser(_('rides'), help=_('print all rides'),
+                                        parents=[year_parser])
     printparser.set_defaults(func=print_rides)
 
     migrateparser = subparsers.add_parser(_('migrate'),
