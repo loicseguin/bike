@@ -35,6 +35,7 @@ __version__ = '0.1'
 
 
 import argparse
+import csv
 import locale
 import os
 import sys
@@ -44,13 +45,13 @@ import webbrowser
 
 RIDEDB = os.path.expanduser('~/.bikerides')
 #RIDEDB = 'rides'
-TIMESTR = "%d/%m/%Y-%H:%M:%S"
+TIMESTR = "%d-%m-%Y %H:%M:%S"
 MINUTES_PER_HOUR = 60.
 
 
 FR_DICT = {
-    "Distance: %6.1f km": "Distance : %6.1f km",
-    "Duration: %6.1f h": "Durée : %6.1f h",
+    "Distance: %6.2f km":        "Distance :        %6.2f km",
+    "Duration: %6.2f h":         "Durée :           %6.2f h",
     "Average speed: %6.2f km/h": "Vitesse moyenne : %6.2f km/h",
     "Gather statistics about bike rides.":
         "Collecte des données sur des randonnées à bicyclette.",
@@ -67,7 +68,7 @@ FR_DICT = {
     "Duration": "Durée",
     "Comment": "Commentaire",
     "Speed": "Vitesse",
-    "dd/mm/yyyy hh:mm": "jj/mm/aaaa hh:mm",
+    "dd-mm-yyyy hh:mm": "jj-mm-aaaa hh:mm",
     "Error: no URL for ride {}": "Erreur: pas d'URL pour la randonnée {}",
     "Opened %s": "Ouverture de %s",
     "User interrupted program, no changes were recorded in the "
@@ -147,23 +148,20 @@ def add_ride(args):
     rides_file.close()
 
 
-def read_db_file(sep='|||'):
+def read_db_file(sep=','):
     """Read ride data file and store information in a list of dictionaries.
 
     """
     rides = []
-    for line in open(RIDEDB):
-        tokens = line.split(sep)
-        ride = {'timestamp': time.strptime(tokens[0], TIMESTR),
-                'distance': float(tokens[1]),
-                'duration': float(tokens[2])}
-        if sep == ' ':
-            ride['comment'] = ' '.join(tokens[3:]).strip()
-            ride['url'] = ''
-        else:
-            ride['comment'] = tokens[3].strip()
-            ride['url'] = tokens[4].strip()
-        rides.append(ride)
+    with open(RIDEDB) as rides_file:
+        rides_reader = csv.reader(rides_file, delimiter=sep, quotechar='"')
+        for ride_row in rides_reader:
+            ride = {'timestamp': time.strptime(ride_row[0], TIMESTR),
+                    'distance': float(ride_row[1]),
+                    'duration': float(ride_row[2]),
+                    'comment': ride_row[3],
+                    'url': ride_row[4]}
+            rides.append(ride)
     return rides
 
 
@@ -175,8 +173,8 @@ def print_stats(args):
     for ride in rides:
         tot_distance += ride['distance']
         tot_duration += ride['duration']
-    print(_("Distance: %6.1f km") % tot_distance)
-    print(_("Duration: %6.1f h") % tot_duration)
+    print(_("Distance:      %6.2f km") % tot_distance)
+    print(_("Duration:      %6.2f h") % tot_duration)
     print(_("Average speed: %6.2f km/h") % (tot_distance / tot_duration))
 
 
@@ -197,12 +195,12 @@ def print_rides(args):
         _('Date'), _('Distance'), _('Duration'), _('Speed'), _('Comment'),
         _('URL'), id='id'))
     print(header_format.format(
-        _('dd/mm/yyyy hh:mm'), '(km)', '(h)', '(km/h)', '', '', id=''))
+        _('dd-mm-yyyy hh:mm'), '(km)', '(h)', '(km/h)', '', '', id=''))
     print(sep_format.format('', '', '', '', '', '', id=''))
     for id, ride in enumerate(rides):
         if len(ride['comment']) <= comment_width:
             print(ride_format.format(
-                time.strftime('%d/%m/%Y %H:%M', ride['timestamp']),
+                time.strftime('%d-%m-%Y %H:%M', ride['timestamp']),
                 ride['distance'], ride['duration'],
                 ride['distance'] / ride['duration'], ride['comment'],
                 ride['url'] != '',
@@ -219,14 +217,16 @@ def print_rides(args):
 
 def migrate(args):
     """Migrate the database file to new version."""
-    rides = read_db_file(sep=' ')
-    rides_file = open(RIDEDB, 'w')
-    for ride in rides:
-        rides_file.write('|||'.join([time.strftime(TIMESTR, ride['timestamp']),
-                                   str(ride['distance']), str(ride['duration']),
-                                   ride['comment'], ride['url']])
-                         + '\n')
-    rides_file.close()
+    rides = read_db_file(sep='|||')
+    new_time_str = "%d-%m-%Y %H:%M:%S"
+    with open(RIDEDB, 'w') as rides_file:
+        rides_writer = csv.writer(rides_file, delimiter=',', quotechar='"',
+                quoting=csv.QUOTE_MINIMAL)
+        for ride in rides:
+            rides_writer.writerow(
+                    [time.strftime(new_time_str, ride['timestamp']),
+                     str(ride['distance']), str(ride['duration']),
+                     ride['comment'], ride['url']])
 
 
 def view(args):
