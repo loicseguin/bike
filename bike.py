@@ -69,7 +69,10 @@ FR_DICT = {
     "Speed": "Vitesse",
     "dd/mm/yyyy hh:mm": "jj/mm/aaaa hh:mm",
     "Error: no URL for ride {}": "Erreur: pas d'URL pour la randonnée {}",
-    "Opened %s": "Ouverture de %s"
+    "Opened %s": "Ouverture de %s",
+    "User interrupted program, no changes were recorded in the "
+    "database.": "L'usager a interrompu le programme, aucun changement "
+                 "enregistré dans la base de données."
     }
 TRANS_DICT = {}
 
@@ -99,8 +102,8 @@ def _(astring):
 def parse_duration(duration_str):
     """Parse a string that represents a duration.
 
-    Accepted formats are a float that specified the number of hours, HH:MM or
-    HHhMM.
+    Accepted formats are a float that specify the number of hours, HH:MM,
+    HHhMM, HHh, or HH:.
 
     """
     duration_str = duration_str.strip()
@@ -113,7 +116,13 @@ def parse_duration(duration_str):
             sep = 'h'
         else:
             raise ValueError('Invalid duration string')
-        hours, minutes = duration_str.split(sep)
+        hours_and_minutes = duration_str.split(sep)
+        if len(hours_and_minutes) == 2:
+            hours, minutes = hours_and_minutes
+        elif len(hours_and_minutes) == 1:
+            hours, minutes = hours_and_minutes[0], 0.0
+        else:
+            raise ValueError('Invalid duration string')
         duration = float(hours) + float(minutes) / MINUTES_PER_HOUR
     return duration
 
@@ -262,7 +271,14 @@ def run(argv=sys.argv[1:]):
     if not 'func' in args:
         clparser.error("You must specify one of 'add', 'rides', 'stats', or 'view'")
 
-    args.func(args)
+    try:
+        args.func(args)
+    except ValueError as e:
+        print(_("Error: {}").format(e), file=sys.stderr)
+    except KeyboardInterrupt as e:
+        print("\n" + _("User interrupted program, no changes were recorded "
+                       "in the database."),
+              file=sys.stderr)
 
 
 if __name__ == '__main__':
