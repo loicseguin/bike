@@ -75,7 +75,8 @@ FR_DICT = {
     "User interrupted program, no changes were recorded in the "
     "database.": "L'usager a interrompu le programme, aucun changement "
                  "enregistré dans la base de données.",
-    "No rides for year(s): ": "Aucune randonnée pour "
+    "No rides for year(s): ": "Aucune randonnée pour ",
+    "Error: no ride with index {}": "Erreur: aucune randonnée avec indice {}"
     }
 TRANS_DICT = {}
 
@@ -258,10 +259,17 @@ def migrate(args):
 
 def view(args):
     """View ride URL in default browser."""
-    rides = read_db_file()
-    if rides[args.ride_id]['url']:
-        print(_('Opened %s') % rides[args.ride_id]['url'])
-        webbrowser.open(rides[args.ride_id]['url'])
+    rides = read_db_file(year=args.year)
+    for ride in rides:
+        if ride['id'] == args.ride_id:
+            break
+    else:
+        print(_('Error: no ride with index {}').format(args.ride_id),
+              file=sys.stderr)
+        return
+    if ride['url']:
+        print(_('Opened %s') % ride['url'])
+        webbrowser.open(ride['url'])
     else:
         print(_('Error: no URL for ride {}').format(args.ride_id),
               file=sys.stderr)
@@ -297,7 +305,8 @@ def run(argv=sys.argv[1:]):
     migrateparser.set_defaults(func=migrate)
 
     viewparser = subparsers.add_parser(_('view'),
-                                       help=_('view ride in web browser'))
+                                       help=_('view ride in web browser'),
+                                       parents=[year_parser])
     viewparser.add_argument('ride_id', help='numerical id of the ride to view',
                             type=int)
     viewparser.set_defaults(func=view)
