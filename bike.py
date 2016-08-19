@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-#-*- coding: utf-8 -*-
 """
 bike
 ====
@@ -28,14 +27,8 @@ text editor.
 
 
 from __future__ import print_function
-
-
-__author__ = "Loïc Séguin-C. <loicseguin@gmail.com>"
-__license__ = "BSD"
-__version__ = '0.2'
-
-
 import argparse
+import datetime
 import csv
 import locale
 import os
@@ -43,11 +36,16 @@ import sys
 import time
 import webbrowser
 
+__author__ = "Loïc Séguin-C. <loicseguin@gmail.com>"
+__license__ = "BSD"
+__version__ = '0.2'
+
 
 RIDEDB = os.path.expanduser('~/.bikerides')
-#RIDEDB = 'rides'
 TIMESTR = "%Y-%m-%d %H:%M:%S"
 MINUTES_PER_HOUR = 60.
+SECONDS_PER_HOUR = 3600.
+KILO = 1000.
 
 
 FR_DICT = {
@@ -131,25 +129,57 @@ def parse_duration(duration_str):
     return duration
 
 
-def add_ride(args):
-    """Add a ride to the database.
+def add_ride(timestamp, distance, duration, comment='', url=''):
+    """Add a ride to the database."""
+    with open(RIDEDB, 'a') as rides_file:
+        rides_writer = csv.writer(rides_file, delimiter=',', quotechar='"',
+                                  quoting=csv.QUOTE_MINIMAL)
+        rides_writer.writerow(
+            [timestamp.strftime(TIMESTR),
+             str(distance), str(duration), comment, url])
+
+
+def add_ride_interactive(args):
+    """Ask the user for information about ride to add to the database.
 
     Let the user interactively specify the distance and the time as well as an
     optional comment.
 
     """
-    timestamp = time.localtime()
+    timestamp = datetime.datetime.now()
     distance = float(input(_("Enter distance: ")))
     duration = parse_duration(input(_("Enter duration: ")))
     comment = input(_("Comment (optional): "))
     url = input(_("Ride URL (optional): "))
+    add_ride(timestamp, distance, duration, comment, url)
 
-    with open(RIDEDB, 'a') as rides_file:
-        rides_writer = csv.writer(rides_file, delimiter=',', quotechar='"',
-                                  quoting=csv.QUOTE_MINIMAL)
-        rides_writer.writerow(
-            [time.strftime(TIMESTR, timestamp),
-             str(distance), str(duration), comment, url])
+
+def read_wahoo_csv(args):
+    """Get a ride information from a Wahoo csv file and add it to the
+    database.
+
+    """
+    try:
+        import pandas as pd
+    except ImportError as e:
+        print(_("Pandas must be installed to be able to import Wahoo "
+                "CSV files."))
+        return
+
+    ride_info = pd.read_csv(args.filename)
+    ride_info = ride_info[ride_info['WorkoutActive'] == True].iloc[[0, -1]]
+    ride_info['Timestamp'] = pd.to_datetime(ride_info['Timestamp'], unit='ms')
+    begining = ride_info.iloc[0]
+    end = ride_info.iloc[-1]
+    duration = (end['Timestamp'] -
+                begining['Timestamp']).seconds / SECONDS_PER_HOUR
+    distance = (end['TotalDistance'] - begining['TotalDistance']) / KILO
+    timestamp = end['Timestamp'].to_datetime()
+    if args.comment:
+        comment = ' '.join(args.comment)
+    else:
+        comment = 'Imported from Wahoo'
+    add_ride(timestamp, distance, duration, comment)
 
 
 def read_db_file(sep=',', year=False):
@@ -289,12 +319,12 @@ def run(argv=sys.argv[1:]):
 
     subparsers = clparser.add_subparsers()
     statsparser = subparsers.add_parser(_('stats'),
-            help=_('print statistics about all rides'),
-            parents=[year_parser])
+                                        help=_('print statistics for all rides'),
+                                        parents=[year_parser])
     statsparser.set_defaults(func=print_stats)
 
     addparser = subparsers.add_parser(_('add'), help=_('add a new ride'))
-    addparser.set_defaults(func=add_ride)
+    addparser.set_defaults(func=add_ride_interactive)
 
     printparser = subparsers.add_parser(_('rides'), help=_('print all rides'),
                                         parents=[year_parser])
@@ -311,10 +341,17 @@ def run(argv=sys.argv[1:]):
                             type=int)
     viewparser.set_defaults(func=view)
 
+    importparser = subparsers.add_parser(_('import'),
+                                         help=_('import ride from Wahoo csv'))
+    importparser.add_argument('filename', help='file name to import')
+    importparser.add_argument('comment', help='comment to add to ride',
+                              nargs=argparse.REMAINDER)
+    importparser.set_defaults(func=read_wahoo_csv)
+
     args = clparser.parse_args(argv)
-    if not 'func' in args:
-        clparser.error("You must specify one of 'add', 'rides', 'stats', or "
-                       "'view'")
+    if 'func' not in args:
+        clparser.error("You must specify one of 'add', 'rides', 'stats', "
+                       "'view' or 'import'.")
 
     try:
         args.func(args)
