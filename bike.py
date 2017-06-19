@@ -210,24 +210,35 @@ def read_db_file(sep=',', year=False):
     return rides
 
 
+def get_stats(rides):
+    """Compute summary statistics for the rides."""
+    tot_distance = 0.0
+    tot_duration = 0.0
+    tot_speed = 0.0
+    num_rides = len(rides)
+    for ride in rides:
+        tot_distance += ride['distance']
+        tot_duration += ride['duration']
+        if tot_duration != 0:
+            tot_speed += ride['distance'] / ride['duration']
+    stats = {'mean_distance': tot_distance / num_rides,
+             'mean_duration': tot_duration / num_rides,
+             'speed': tot_speed / num_rides,
+             'tot_distance': tot_distance,
+             'tot_duration': tot_duration}
+    return stats
+
+
 def print_stats(args):
     """Print statistics about the rides."""
     rides = read_db_file(year=args.year)
     if len(rides) == 0:
         print(_("No rides for year(s): ") + ', '.join(map(str, args.year)))
         return
-    tot_distance = 0.0
-    tot_duration = 0.0
-    for ride in rides:
-        tot_distance += ride['distance']
-        tot_duration += ride['duration']
-    if tot_duration != 0:
-        speed = '{:8.2f}'.format(tot_distance / tot_duration)
-    else:
-        speed = 'nan'
-    print(_("Distance:      %8.2f km") % tot_distance)
-    print(_("Duration:      %8.2f h") % tot_duration)
-    print(_("Average speed: %s km/h") % speed)
+    stats = get_stats(rides)
+    print(_("Distance:      %8.2f km") % stats['tot_distance'])
+    print(_("Duration:      %8.2f h") % stats['tot_duration'])
+    print(_("Average speed: %8.2f km/h") % stats['speed'])
 
 
 def print_rides(args):
