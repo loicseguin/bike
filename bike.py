@@ -28,17 +28,16 @@ text editor.
 
 from __future__ import print_function
 import argparse
-import datetime
+from datetime import datetime
 import csv
 import locale
 import os
 import sys
-import time
 import webbrowser
 
 __author__ = "Loïc Séguin-C. <loicseguin@gmail.com>"
 __license__ = "BSD"
-__version__ = '0.2'
+__version__ = '0.3'
 
 
 RIDEDB = os.path.expanduser('~/.bikerides')
@@ -121,8 +120,8 @@ def parse_duration(duration_str):
         hours_and_minutes = duration_str.split(sep)
         if len(hours_and_minutes) == 2:
             hours, minutes = hours_and_minutes
-        elif len(hours_and_minutes) == 1:
-            hours, minutes = hours_and_minutes[0], 0.0
+            if not minutes:
+                minutes = 0.0
         else:
             raise ValueError('Invalid duration string')
         duration = float(hours) + float(minutes) / MINUTES_PER_HOUR
@@ -146,7 +145,7 @@ def add_ride_interactive(args):
     optional comment.
 
     """
-    timestamp = datetime.datetime.now()
+    timestamp = datetime.now()
     distance = float(input(_("Enter distance: ")))
     duration = parse_duration(input(_("Enter duration: ")))
     comment = input(_("Comment (optional): "))
@@ -190,7 +189,9 @@ def read_db_file(sep=',', year=False):
     """
     rides = []
     if not year:
-        years = [time.localtime().tm_year]
+        years = [datetime.now().year]
+    elif year == 'all':
+        years = 'all'
     elif not hasattr(year, '__contains__'):
         years = [year]
     else:
@@ -199,14 +200,18 @@ def read_db_file(sep=',', year=False):
     with open(RIDEDB) as rides_file:
         rides_reader = csv.reader(rides_file, delimiter=sep, quotechar='"')
         for id, ride_row in enumerate(rides_reader):
-            ride = {'timestamp': time.strptime(ride_row[0], TIMESTR),
+            ride = {'timestamp': datetime.strptime(ride_row[0], TIMESTR),
                     'distance': float(ride_row[1]),
                     'duration': float(ride_row[2]),
                     'comment': ride_row[3],
                     'url': ride_row[4],
                     'id': id}
-            if ride['timestamp'].tm_year in years:
+            if years != 'all':
+                if ride['timestamp'].year in years:
+                    rides.append(ride)
+            else:
                 rides.append(ride)
+    rides.sort(key=lambda x: x['timestamp'])
     return rides
 
 
@@ -274,7 +279,7 @@ def print_rides(args):
             speed = '{:.1f}'.format(ride['distance'] / ride['duration'])
         else:
             speed = 'nan'
-        elements = [time.strftime(time_str_format, ride['timestamp']),
+        elements = [ride['timestamp'].strftime(time_str_format),
                     ride['distance'], ride['duration'], speed]
         if len(ride['comment']) <= comment_width:
             elements.append(ride['comment'])
@@ -293,7 +298,7 @@ def migrate(args):
                                   quoting=csv.QUOTE_MINIMAL)
         for ride in rides:
             rides_writer.writerow(
-                [time.strftime(new_time_str, ride['timestamp']),
+                [ride['timestamp'].strftime(new_time_str),
                  str(ride['distance']), str(ride['duration']),
                  ride['comment'], ride['url']])
 
@@ -325,7 +330,7 @@ def run(argv=sys.argv[1:]):
 
     year_parser = argparse.ArgumentParser(add_help=False)
     year_parser.add_argument('year', help=_('year or list of years'),
-                             nargs='*', default=time.localtime().tm_year,
+                             nargs='*', default=datetime.now().year,
                              type=int)
 
     subparsers = clparser.add_subparsers()
