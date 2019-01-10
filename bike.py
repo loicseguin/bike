@@ -197,22 +197,38 @@ def read_db_file(sep=',', year=False):
     else:
         years = year
 
-    with open(RIDEDB) as rides_file:
-        rides_reader = csv.reader(rides_file, delimiter=sep, quotechar='"')
-        for id, ride_row in enumerate(rides_reader):
-            ride = {'timestamp': datetime.strptime(ride_row[0], TIMESTR),
-                    'distance': float(ride_row[1]),
-                    'duration': float(ride_row[2]),
-                    'comment': ride_row[3],
-                    'url': ride_row[4],
-                    'id': id}
-            if years != 'all':
-                if ride['timestamp'].year in years:
+    try:
+        with open(RIDEDB) as rides_file:
+            rides_reader = csv.reader(rides_file, delimiter=sep, quotechar='"')
+            for id, ride_row in enumerate(rides_reader):
+                ride = {'timestamp': datetime.strptime(ride_row[0], TIMESTR),
+                        'distance': float(ride_row[1]),
+                        'duration': float(ride_row[2]),
+                        'comment': ride_row[3],
+                        'url': ride_row[4],
+                        'id': id}
+                if years != 'all':
+                    if ride['timestamp'].year in years:
+                        rides.append(ride)
+                else:
                     rides.append(ride)
-            else:
-                rides.append(ride)
-    rides.sort(key=lambda x: x['timestamp'])
+        rides.sort(key=lambda x: x['timestamp'])
+    except FileNotFoundError:
+        open(RIDEDB, 'w').close()
     return rides
+
+
+def update_db(rides):
+    """Rewrite the database file with the content of rides."""
+    rides.sort(key=lambda x: x['timestamp'])
+    with open(RIDEDB, 'w') as rides_file:
+        rides_writer = csv.writer(rides_file, delimiter=',', quotechar='"',
+                                  quoting=csv.QUOTE_MINIMAL)
+        for ride in rides:
+            rides_writer.writerow(
+                [ride['timestamp'].strftime(TIMESTR),
+                 str(ride['distance']), str(ride['duration']), ride['comment'],
+                 ride['url']])
 
 
 def get_stats(rides):
@@ -226,9 +242,12 @@ def get_stats(rides):
         tot_duration += ride['duration']
         if tot_duration != 0:
             tot_speed += ride['distance'] / ride['duration']
-    stats = {'mean_distance': tot_distance / num_rides,
-             'mean_duration': tot_duration / num_rides,
-             'speed': tot_speed / num_rides,
+    mean_distance = tot_distance / num_rides if num_rides > 0 else 0
+    mean_duration = tot_duration / num_rides if num_rides > 0 else 0
+    speed = tot_speed / num_rides if num_rides > 0 else 0
+    stats = {'mean_distance': mean_distance,
+             'mean_duration': mean_duration,
+             'speed': speed,
              'tot_distance': tot_distance,
              'tot_duration': tot_duration}
     return stats
