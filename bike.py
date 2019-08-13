@@ -130,7 +130,7 @@ def parse_duration(duration_str):
 
 def add_ride(timestamp, distance, duration, comment='', url=''):
     """Add a ride to the database."""
-    with open(RIDEDB, 'a', newline='\n') as rides_file:
+    with open(RIDEDB, 'a', newline='\n', encoding='utf-8') as rides_file:
         rides_writer = csv.writer(rides_file, delimiter=',', quotechar='"',
                                   quoting=csv.QUOTE_MINIMAL)
         rides_writer.writerow(
@@ -198,7 +198,7 @@ def read_db_file(sep=',', year=False):
         years = year
 
     try:
-        with open(RIDEDB) as rides_file:
+        with open(RIDEDB, encoding='utf-8') as rides_file:
             rides_reader = csv.reader(rides_file, delimiter=sep, quotechar='"')
             for id, ride_row in enumerate(rides_reader):
                 ride = {'timestamp': datetime.strptime(ride_row[0], TIMESTR),
@@ -214,14 +214,14 @@ def read_db_file(sep=',', year=False):
                     rides.append(ride)
         rides.sort(key=lambda x: x['timestamp'])
     except FileNotFoundError:
-        open(RIDEDB, 'w').close()
+        open(RIDEDB, 'w', encoding='utf-8').close()
     return rides
 
 
 def update_db(rides):
     """Rewrite the database file with the content of rides."""
     rides.sort(key=lambda x: x['timestamp'])
-    with open(RIDEDB, 'w', newline='\n') as rides_file:
+    with open(RIDEDB, 'w', newline='\n', encoding='utf-8') as rides_file:
         rides_writer = csv.writer(rides_file, delimiter=',', quotechar='"',
                                   quoting=csv.QUOTE_MINIMAL)
         for ride in rides:
@@ -312,7 +312,7 @@ def migrate(args):
     """Migrate the database file to new version."""
     rides = read_db_file()
     new_time_str = "%Y-%m-%d %H:%M:%S"
-    with open(RIDEDB, 'w') as rides_file:
+    with open(RIDEDB, 'w', encoding='utf-8') as rides_file:
         rides_writer = csv.writer(rides_file, delimiter=',', quotechar='"',
                                   quoting=csv.QUOTE_MINIMAL)
         for ride in rides:
