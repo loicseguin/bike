@@ -130,7 +130,7 @@ def parse_duration(duration_str):
 
 def add_ride(timestamp, distance, duration, comment='', url=''):
     """Add a ride to the database."""
-    with open(RIDEDB, 'a') as rides_file:
+    with open(RIDEDB, 'a', newline='\n') as rides_file:
         rides_writer = csv.writer(rides_file, delimiter=',', quotechar='"',
                                   quoting=csv.QUOTE_MINIMAL)
         rides_writer.writerow(
@@ -184,7 +184,7 @@ def read_wahoo_csv(args):
 def read_db_file(sep=',', year=False):
     """Read ride data file and store information in a list of dictionaries.  By
     default, return only rides for the current year.  If ``year`` is set to a
-    single year of a list of years, return rides for the specified years.
+    single year or a list of years, return rides for the specified years.
 
     """
     rides = []
@@ -221,7 +221,7 @@ def read_db_file(sep=',', year=False):
 def update_db(rides):
     """Rewrite the database file with the content of rides."""
     rides.sort(key=lambda x: x['timestamp'])
-    with open(RIDEDB, 'w') as rides_file:
+    with open(RIDEDB, 'w', newline='\n') as rides_file:
         rides_writer = csv.writer(rides_file, delimiter=',', quotechar='"',
                                   quoting=csv.QUOTE_MINIMAL)
         for ride in rides:
